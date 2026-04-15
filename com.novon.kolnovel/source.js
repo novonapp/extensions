@@ -50,7 +50,6 @@
         if (!u) return '';
         if (u.startsWith('data:')) return '';
         if (u.includes(',')) {
-            // srcset-like string: keep first candidate URL only
             u = u.split(',')[0].trim().split(/\s+/)[0].trim();
         } else if (/\s\d+w$/.test(u)) {
             u = u.split(/\s+/)[0].trim();
@@ -112,7 +111,6 @@
                     n.remove();
                     return;
                 }
-                // Fallback for parsers that don't expose remove()
                 if ('innerHTML' in n) {
                     n.innerHTML = '';
                 }
@@ -122,10 +120,10 @@
 
     function _normalizeParagraphText(text) {
         return (text || '')
+            // --- Watermark patterns ---
             .replace(/[^.!?،\n]*\*[^.!?،\n]*(?:روايات|رواياتنا|موقع|ko|k0|lno|vel|\.com)[^.!?،\n]*/gi, ' ')
             .replace(/(?:إ?قرأ|اقرأ)?\s*رواياتنا[\s\S]*?(?:\.com|كوم)?/gi, ' ')
             .replace(/موقع\s*ملوك\s*الروايات[\s\S]*?(?:\.com|كوم)?/gi, ' ')
-            // KOL watermark often injects a standalone ". com" token.
             .replace(/(^|[\s\u00A0])\.?\s*c\s*o\s*m\.?(?=\s|$)/gi, ' ')
             .replace(/(?:^|[\s\u00A0])\.?\s*c\s*o\s*m\.?\s*(?=[\u0600-\u06FFA-Za-z0-9])/gi, ' ')
             .replace(/ترجمة\s*.*?(?:القرآن|$)/gi, ' ')
@@ -139,8 +137,19 @@
             .replace(/kolnovel(?:\s*\.\s*com)?/gi, ' ')
             .replace(/ملوك\s*الروايات/gi, ' ')
             .replace(/ترجمة\s*موقع[\s\S]*$/gi, ' ')
-            .replace(/222222222+/g, ' ')
+            // --- Repeated-digit noise lines (e.g. 222222222, 1111111111) ---
+            .replace(/(\d)\1{4,}/g, ' ')
+            // --- PHP code injection noise ---
+            .replace(/\?>\s*$/gi, ' ')
+            .replace(/<\?php\b[\s\S]*?(?:\?>|$)/gi, ' ')
+            .replace(/\$\w+\s*=\s*random_bytes\s*\([\s\S]*?\)\s*;/gi, ' ')
+            .replace(/echo\s+bin2hex\s*\([\s\S]*?\)\s*;/gi, ' ')
+            .replace(/random_bytes\s*\(\d+\)\s*;?/gi, ' ')
+            .replace(/bin2hex\s*\([\s\S]*?\)\s*;?/gi, ' ')
+            .replace(/\$\w+\s*=\s*[^;]+;/gi, ' ')
+            // --- Separator lines ---
             .replace(/---+/g, ' ')
+            // --- Cleanup ---
             .replace(/\s+/g, ' ')
             .trim();
     }
@@ -157,30 +166,65 @@
         const t = _normalizeParagraphText(text);
         if (!t) return true;
         if (t.length <= 2) return true;
+
+        // Pure digits / repeated characters
+        if (/^\d+$/.test(t)) return true;
+        if (/^(.)\1{4,}$/.test(t)) return true;
+
+        // PHP / code remnants
+        if (/random_bytes|bin2hex|\$bytes|\$\w+\s*=|<\?php|\?>/i.test(t)) return true;
+        if (/^php\b/i.test(t)) return true;
+
+        // URL / com-only fragments
         if (/^(?:[.\-:|]+\s*)?(?:c\s*o\s*m)\.?$/i.test(t)) return true;
         if (/^(?:[.\-:|]+\s*)?(?:c\s*o\s*m)\b/i.test(t)) return true;
+        if (/^(?:\.?\s*com|com\.?)$/i.test(t)) return true;
+        if (/^(https?:\/\/|www\.)/i.test(t)) return true;
+
+        // Arabic noise markers
         if (/^\[\s*ملاحظة\s*:/i.test(t)) return true;
         if (/^(chapter|الفصل)\b[:\s\d.-]*$/i.test(t)) return true;
-        if (/^(https?:\/\/|www\.)/i.test(t)) return true;
-        if (/^(?:\.?\s*com|com\.?)$/i.test(t)) return true;
-        if (/ترجمة.*(القرآن|الصلوات|الصلوات|لا تنسوا|اوقاتها|أوقاتها)/i.test(t)) return true;
+        if (/ترجمة.*(القرآن|الصلوات|لا تنسوا|اوقاتها|أوقاتها)/i.test(t)) return true;
+
+        // pubfuturetag / ad injection remnants
+        if (/pubfuturetag|pf-\d+-\d+/i.test(t)) return true;
+
+        // Separator-only lines
+        if (/^[-—–=*_\s]+$/.test(t)) return true;
+
         return false;
     }
 
+    /**
+     * Collect paragraphs using last-occurrence deduplication with index sorting.
+     *
+     * The KolNovel site intentionally repeats real paragraphs (sometimes 2-3×)
+     * mixed with noise paragraphs as an anti-scraping technique. Keeping only
+     * the FIRST occurrence caused narrative order issues because the real
+     * paragraph often appears AFTER the noise copy. We now track the last
+     * position at which each unique paragraph appears and sort by that index,
+     * which produces the correct reading order.
+     */
     function _collectCleanParagraphs(node) {
-        const seen = new Set();
         const all = (node.querySelectorAll('p') || [])
             .map(p => _normalizeParagraphText(p.text || ''))
             .filter(t => t.length > 0);
-        const kept = [];
-        all.forEach(t => {
+
+        // Map from canonical key → { text, lastIndex }
+        const seenMap = new Map();
+        all.forEach((t, i) => {
             if (_isNoiseText(t)) return;
             const key = _canonicalParagraphKey(t);
             if (!key) return;
-            if (seen.has(key)) return;
-            seen.add(key);
-            kept.push(t);
+            // Overwrite on every occurrence — last one wins (correct position)
+            seenMap.set(key, { text: t, index: i });
         });
+
+        // Sort by last-seen index to restore narrative order
+        const kept = Array.from(seenMap.values())
+            .sort((a, b) => a.index - b.index)
+            .map(v => v.text);
+
         return { all, kept };
     }
 
@@ -239,7 +283,6 @@
         const encoded = encodeURIComponent(rawQuery);
         const searchUrlCandidates = page <= 1
             ? [
-                // KOL Arabic search works better with raw query first.
                 `/?s=${rawQuery}`,
                 `/search?q=${rawQuery}`,
                 `/?s=${encoded}`,
@@ -317,7 +360,6 @@
             .forEach(addFromContainer);
 
         if (resultCandidates.length === 0) {
-            // Fallback for pages that only expose heading links.
             (doc.querySelectorAll('h2 a, h3 a') || []).forEach(aTag => {
                 const rawHref = aTag.attr('href') || '';
                 if (!isLikelyNovelUrl(rawHref)) return;
@@ -344,7 +386,7 @@
         return (text || '')
             .replace(/window\.pubfuturetag[\s\S]*?(?=(نشأ|ومع ذلك|والأسوأ|$))/gi, ' ')
             .replace(/pubfuturetag[\s\S]*?(?=(نشأ|ومع ذلك|والأسوأ|$))/gi, ' ')
-            .replace(/222222222/g, '')
+            .replace(/(\d)\1{4,}/g, '')
             .replace(/<script[\s\S]*?<\/script>/gi, ' ')
             .replace(/\s+/g, ' ')
             .trim();
@@ -379,7 +421,6 @@
             doc.querySelector('.post-content_item .summary-content') ||
             doc.querySelector('.entry-content p');
         let description = synopsisNode ? _cleanDescriptionText(synopsisNode.text || '') : '';
-        // Guard against accidentally capturing chapter list text.
         const chapterLikeHits = (description.match(/الفصل|chapter/gi) || []).length;
         if (chapterLikeHits > 6 || description.length > 6000) {
             description = '';
@@ -474,15 +515,19 @@
             ) || [])
                 .map(p => _normalizeParagraphText(p.text || ''))
                 .filter(t => t.length > 0);
-            const dedup = new Set();
-            const fallbackParagraphs = fallbackAll.filter(t => {
-                if (_isNoiseText(t)) return false;
+
+            // Same last-occurrence + index-sort logic for the fallback path
+            const fallbackMap = new Map();
+            fallbackAll.forEach((t, i) => {
+                if (_isNoiseText(t)) return;
                 const key = _canonicalParagraphKey(t);
-                if (!key) return false;
-                if (dedup.has(key)) return false;
-                dedup.add(key);
-                return true;
+                if (!key) return;
+                fallbackMap.set(key, { text: t, index: i });
             });
+            const fallbackParagraphs = Array.from(fallbackMap.values())
+                .sort((a, b) => a.index - b.index)
+                .map(v => v.text);
+
             filtered += Math.max(0, fallbackAll.filter(t => t.length > 0).length - fallbackParagraphs.length);
             kept += fallbackParagraphs.length;
             if (fallbackParagraphs.length > 0) {
