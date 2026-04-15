@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/novon-app/novon/main/assets/images/logo.png" alt="Novon logo" width="120" />
+  <img src="logo.png" alt="Novon logo" width="120" />
   <h1>Novon Extensions</h1>
   <p>The official extension repository and developer SDK for the Novon ecosystem.</p>
   <p>
