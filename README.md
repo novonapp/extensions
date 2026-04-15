@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo.png" alt="Novon logo" width="120" />
+  <img src="https://raw.githubusercontent.com/novon-app/novon/main/assets/images/logo.png" alt="Novon logo" width="120" />
   <h1>Novon Extensions</h1>
   <p>The official extension repository and developer SDK for the Novon ecosystem.</p>
   <p>
@@ -88,19 +88,33 @@ extensions-example/
 
 ## Bundling & Automation
 
-We use a Python-based automation pipeline to ensure every extension is correctly packaged and hashed.
+We use a Python-based automation pipeline to ensure every extension is correctly packaged, hashed, and synchronized with the registry.
 
-### Building a Bundle
-To generate new bundles and update the `index.json` registry, run the following command from the root of this repository:
+### 1. Configure the Script
+Open `bundle_extensions.py` and update the `CONFIGURATION` section at the top with your repository details:
+
+```python
+# --- CONFIGURATION ---
+ORG_NAME = "novon-app"
+REPO_NAME = "extensions"
+BRANCH = "main"
+REGISTRY_DISPLAY_NAME = "Novon Official Extensions"
+# ---------------------
+```
+
+### 2. Run the Bundle Tool
+To generate new bundles and update the `index.json` registry, run the script from the root of this repository:
 
 ```bash
 python bundle_extensions.py
 ```
 
-### What the script does:
-1. **Packaging**: Compresses each extension directory into a `.novext` (ZIP) bundle.
-2. **Hashing**: Computes a SHA-256 hash of the generated bundle for integrity verification.
-3. **Synchronization**: Updates the global `index.json` with the new version, hash, and download URL.
+### What the script does automatically:
+1. **Discovery**: Automatically identifies all extension directories starting with `com.novon.*`.
+2. **Script Integrity**: Calculates the SHA-256 hash of `source.js` and injects it into the local `manifest.json`.
+3. **Packaging**: Compresses each extension directory into a `.novext` (ZIP) bundle.
+4. **Bundle Integrity**: Computes a SHA-256 hash of the final bundle for download verification.
+5. **Synchronization**: Updates the global `index.json` with new versions, hashes, and raw GitHub download URLs.
 
 > [!NOTE]
 > Ensure you increment the `version` field in your `manifest.json` before running the bundling script, otherwise the registry will not detect the update as a new release.
