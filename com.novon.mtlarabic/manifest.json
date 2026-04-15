@@ -23,8 +23,8 @@
   "supportsFilters": false,
   "icon": "icon.png",
   "sha256": "216a6a839de94f0db0dc74998944f2736db5d13f4d7038bb4f0c4c73bd27d4c8",
-  "sourceUrl": "https://github.com/novon-app/extensions/tree/main",
-  "updateUrl": "https://raw.githubusercontent.com/novon-app/extensions/repo/index.json",
+  "sourceUrl": "https://github.com/novonapp/extensions/tree/main",
+  "updateUrl": "https://raw.githubusercontent.com/novonapp/extensions/repo/index.json",
   "authorName": "None",
   "authorUrl": "",
   "tags": [

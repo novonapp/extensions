@@ -20,8 +20,8 @@
   "supportsFilters": false,
   "icon": "icon.png",
   "sha256": "fff4b36865281a017acc63a1c18201b4c740911a7a489dc0f69b91d735416e12",
-  "sourceUrl": "https://github.com/novon-app/extensions/tree/main",
-  "updateUrl": "https://raw.githubusercontent.com/novon-app/extensions/repo/index.json",
+  "sourceUrl": "https://github.com/novonapp/extensions/tree/main",
+  "updateUrl": "https://raw.githubusercontent.com/novonapp/extensions/repo/index.json",
   "authorName": "None",
   "authorUrl": "",
   "tags": ["arabic", "translated"]
