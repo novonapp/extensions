@@ -121,12 +121,15 @@
     function _normalizeParagraphText(text) {
         return (text || '')
             // --- Watermark patterns ---
-            .replace(/[^.!?،\n]*\*[^.!?،\n]*(?:روايات|رواياتنا|موقع|ko|k0|lno|vel|\.com)[^.!?،\n]*/gi, ' ')
+            // Broad pattern: only trigger when a literal * wraps Arabic site-name keywords
+            // Removed short fragments (ko/k0/lno/vel) – they are too risky for legitimate text
+            .replace(/[^.!?،\n]*\*[^.!?،\n]*(?:روايات|رواياتنا|موقع|\.com)[^.!?،\n]*/gi, ' ')
             .replace(/(?:إ?قرأ|اقرأ)?\s*رواياتنا[\s\S]*?(?:\.com|كوم)?/gi, ' ')
             .replace(/موقع\s*ملوك\s*الروايات[\s\S]*?(?:\.com|كوم)?/gi, ' ')
             .replace(/(^|[\s\u00A0])\.?\s*c\s*o\s*m\.?(?=\s|$)/gi, ' ')
             .replace(/(?:^|[\s\u00A0])\.?\s*c\s*o\s*m\.?\s*(?=[\u0600-\u06FFA-Za-z0-9])/gi, ' ')
-            .replace(/ترجمة\s*.*?(?:القرآن|$)/gi, ' ')
+            // Fixed: require القرآن to actually be present; do NOT use bare $ which eats the whole paragraph
+            .replace(/ترجمة\s*[^\n]*القرآن[^\n]*/gi, ' ')
             .replace(/\[\s*ملاحظة\s*:[\s\S]*?\]/gi, ' ')
             .replace(/window\.pubfuturetag[\s\S]*?(?:\}|\)|;|$)/gi, ' ')
             .replace(/pubfuturetag\.push\([\s\S]*?(?:\}|\)|;|$)/gi, ' ')
@@ -196,36 +199,63 @@
     }
 
     /**
-     * Collect paragraphs using last-occurrence deduplication with index sorting.
+     * Collect paragraphs using first-occurrence deduplication with index sorting.
      *
-     * The KolNovel site intentionally repeats real paragraphs (sometimes 2-3×)
-     * mixed with noise paragraphs as an anti-scraping technique. Keeping only
-     * the FIRST occurrence caused narrative order issues because the real
-     * paragraph often appears AFTER the noise copy. We now track the last
-     * position at which each unique paragraph appears and sort by that index,
-     * which produces the correct reading order.
+     * KolNovel intentionally repeats real paragraphs (sometimes 2-3×) mixed with
+     * noise paragraphs as an anti-scraping technique.  We track the FIRST position
+     * at which each unique paragraph appears (canonical key = stripped text) and
+     * sort by that index to preserve narrative order.  When multiple copies exist,
+     * we keep the LONGEST text (fewest watermark remnants).
      */
     function _collectCleanParagraphs(node) {
         const all = (node.querySelectorAll('p') || [])
             .map(p => _normalizeParagraphText(p.text || ''))
             .filter(t => t.length > 0);
 
-        // Map from canonical key → { text, lastIndex }
+        // If very few <p> tags found, also try splitting innerHTML on <br> tags
+        // (some KolNovel chapters wrap content in <div> blocks with <br> separators)
+        let source = all;
+        if (all.length < 3) {
+            const rawHtml = (node.innerHTML || '');
+            const brParts = rawHtml
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/p>/gi, '\n')
+                .replace(/<[^>]+>/g, '')
+                .split('\n')
+                .map(t => _normalizeParagraphText(t))
+                .filter(t => t.length > 2);
+            if (brParts.length > all.length) {
+                source = brParts;
+            }
+        }
+
+        // Map from canonical key → { text, index }
+        // Strategy: sort by FIRST occurrence (preserves narrative order even when
+        // the site appends watermarked copies of earlier paragraphs at the end).
+        // Text is updated to the LONGEST version seen (more content = cleaner copy).
         const seenMap = new Map();
-        all.forEach((t, i) => {
+        source.forEach((t, i) => {
             if (_isNoiseText(t)) return;
             const key = _canonicalParagraphKey(t);
             if (!key) return;
-            // Overwrite on every occurrence — last one wins (correct position)
-            seenMap.set(key, { text: t, index: i });
+            if (!seenMap.has(key)) {
+                // First occurrence – record position and text
+                seenMap.set(key, { text: t, index: i });
+            } else {
+                const existing = seenMap.get(key);
+                // Keep earliest index for correct narrative order.
+                // Prefer the longer text (fewer watermark remnants).
+                const betterText = t.length > existing.text.length ? t : existing.text;
+                seenMap.set(key, { text: betterText, index: existing.index });
+            }
         });
 
-        // Sort by last-seen index to restore narrative order
+        // Sort by first-seen index to restore narrative order
         const kept = Array.from(seenMap.values())
             .sort((a, b) => a.index - b.index)
             .map(v => v.text);
 
-        return { all, kept };
+        return { all: source, kept };
     }
 
     function _paragraphHtmlFrom(node) {
@@ -516,13 +546,19 @@
                 .map(p => _normalizeParagraphText(p.text || ''))
                 .filter(t => t.length > 0);
 
-            // Same last-occurrence + index-sort logic for the fallback path
+            // Same first-occurrence + index-sort logic for the fallback path
             const fallbackMap = new Map();
             fallbackAll.forEach((t, i) => {
                 if (_isNoiseText(t)) return;
                 const key = _canonicalParagraphKey(t);
                 if (!key) return;
-                fallbackMap.set(key, { text: t, index: i });
+                if (!fallbackMap.has(key)) {
+                    fallbackMap.set(key, { text: t, index: i });
+                } else {
+                    const existing = fallbackMap.get(key);
+                    const betterText = t.length > existing.text.length ? t : existing.text;
+                    fallbackMap.set(key, { text: betterText, index: existing.index });
+                }
             });
             const fallbackParagraphs = Array.from(fallbackMap.values())
                 .sort((a, b) => a.index - b.index)

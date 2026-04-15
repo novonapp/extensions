@@ -1,7 +1,7 @@
 {
   "id": "com.novon.kolnovel",
   "name": "KolNovel",
-  "version": "1.3.6",
+  "version": "1.3.7",
   "apiVersion": "1",
   "minAppVersion": "0.0.1",
   "maxAppVersion": null,
@@ -22,7 +22,7 @@
   "supportsSearch": true,
   "supportsFilters": false,
   "icon": "icon.png",
-  "sha256": "b5f7fa96ad2778be124b168e1da48a6fe57580cad7b9b9a04a1090312b054b0f",
+  "sha256": "52ac537d96f39866840d3660ebdd07ae8e5918914d22e98bd9eb02e01577536e",
   "sourceUrl": "https://github.com/novonapp/extensions/tree/main",
   "updateUrl": "https://raw.githubusercontent.com/novonapp/extensions/main/index.json",
   "authorName": "None",
