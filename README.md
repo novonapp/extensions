@@ -168,6 +168,18 @@ extensions-example/
 >
 > Use of these extensions is at your own risk.
 
+## Contributing
+
+We welcome contributions from the community. To maintain the quality of the project, we follow a simple workflow for all changes.
+
+Please note that we do not accept direct pushes to the `main` branch. To contribute, please follow these steps:
+
+1. **Fork the Repository**: Create your own copy of the project.
+2. **Create a Branch**: Make your changes in a new branch on your fork.
+3. **Open a Pull Request**: Submit your changes for review by opening a pull request against our `main` branch.
+
+All pull requests must receive at least one approval from a maintainer before they can be merged. Thank you for helping improve the Novon ecosystem
+
 ## Authors & Maintainers
 
 - **MultiX0** — Lead Developer & Maintainer
