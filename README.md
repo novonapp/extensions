@@ -86,35 +86,70 @@ extensions-example/
 └── bundle_extensions.py     # Automation & Bundling script
 ```
 
+## Novon Management Shell
+
+The repository includes a Command Line Interface (CLI) to manage the extension lifecycle and project configuration.
+
+### 1. Getting Started
+
+Launch the Novon Shell by running the wrapper script for your platform:
+
+- **Windows**: `.\novon.ps1`
+- **Linux/macOS**: `./novon.sh`
+
+> [!NOTE]
+> On Linux and macOS, you may need to grant execution permissions before running the script:
+> `chmod +x novon.sh`
+
+If run without arguments, the tool enters an interactive REPL mode.
+
+### 2. Available Commands
+
+| Command | Usage | Description |
+| :--- | :--- | :--- |
+| `bundle` | `bundle [--upgrade]` | Packages extensions and updates the registry. |
+| `config` | `config` | Displays the current settings from novon_config.json. |
+| `set` | `set <key> <val>` | Updates a configuration value in novon_config.json. |
+| `list` | `list` | Lists all extensions found in the root directory. |
+| `help` | `help` | Displays command usage and descriptions. |
+| `exit` | `exit` | Terminates the shell session. |
+
 ## Bundling & Automation
 
-We use a Python-based automation pipeline to ensure every extension is correctly packaged, hashed, and synchronized with the registry.
+The bundling engine automates the packaging, hashing, and registry synchronization process.
 
-### 1. Configure the Script
-Open `bundle_extensions.py` and update the `CONFIGURATION` section at the top with your repository details:
+### 1. Automated Versioning
+When running the `bundle` command, the script provides an option to automatically increment the patch version (e.g., 1.0.0 to 1.0.1) in the `manifest.json` for all discovered extensions.
 
-```python
-# --- CONFIGURATION ---
-ORG_NAME = "novon-app"
-REPO_NAME = "extensions"
-BRANCH = "main"
-REGISTRY_DISPLAY_NAME = "Novon Official Extensions"
-# ---------------------
-```
+### 2. Integrity and Validation
+- **Source Integrity**: Calculates SHA-256 hashes for every `source.js` to ensure script integrity within the manifest.
+- **Bundle Integrity**: Generates SHA-256 hashes for the final `.novext` packages for download verification.
 
-### 2. Run the Bundle Tool
-To generate new bundles and update the `index.json` registry, run the script from the root of this repository:
+### 3. Registry Synchronization
+The script automatically updates `index.json` with the updated versions, hashes, and raw GitHub URLs based on the configuration settings.
 
+### 4. Headless Execution (CI/CD)
+The CLI supports one-shot execution for automated environments:
 ```bash
-python bundle_extensions.py
+./novon.sh bundle --upgrade
 ```
 
-### What the script does automatically:
-1. **Discovery**: Automatically identifies all extension directories starting with `com.novon.*`.
-2. **Script Integrity**: Calculates the SHA-256 hash of `source.js` and injects it into the local `manifest.json`.
-3. **Packaging**: Compresses each extension directory into a `.novext` (ZIP) bundle.
-4. **Bundle Integrity**: Computes a SHA-256 hash of the final bundle for download verification.
-5. **Synchronization**: Updates the global `index.json` with new versions, hashes, and raw GitHub download URLs.
+## Project Structure
+
+```text
+extensions-example/
+├── com.novon.kolnovel/      # Extension source directory
+│   ├── manifest.json        # Extension metadata
+│   ├── source.js            # Provider logic
+│   └── icon.png             # Source icon
+├── bundles/                 # Generated .novext packages
+├── index.json               # The global repo registry
+├── novon_config.json        # Centralized project configuration
+├── novon.py                 # CLI entry point
+├── bundle_extensions.py     # Bundling logic engine
+├── novon.sh                 # Bash entry point
+└── novon.ps1                # PowerShell entry point
+```
 
 > [!NOTE]
 > Ensure you increment the `version` field in your `manifest.json` before running the bundling script, otherwise the registry will not detect the update as a new release.

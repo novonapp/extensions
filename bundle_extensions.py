@@ -5,12 +5,30 @@ import hashlib
 import sys
 from datetime import datetime, timezone
 
-# --- CONFIGURATION ---
-ORG_NAME = "novonapp"
-REPO_NAME = "extensions"
-BRANCH = "main"
-REGISTRY_DISPLAY_NAME = "Novon Official Extensions"
-# ---------------------
+# --- CONFIGURATION LOADING ---
+CONFIG_PATH = "novon_config.json"
+
+def load_config():
+    if not os.path.exists(CONFIG_PATH):
+        # Create default if missing
+        default = {
+            "org_name": "novonapp",
+            "repo_name": "extensions",
+            "branch": "main",
+            "registry_name": "Novon Official Extensions"
+        }
+        with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+            json.dump(default, f, indent=2)
+        return default
+    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+config = load_config()
+ORG_NAME = config.get("org_name", "novonapp")
+REPO_NAME = config.get("repo_name", "extensions")
+BRANCH = config.get("branch", "main")
+REGISTRY_DISPLAY_NAME = config.get("registry_name", "Novon Official Extensions")
+# ------------------------------
 
 # ANSI Color Codes
 CLR_G = "\033[92m" # Green
@@ -54,8 +72,19 @@ def bundle_extensions():
         print(f"{CLR_R}Error: Directory {repo_dir} not found.{CLR_0}")
         return
 
-    upgrade_choice = input(f"\n{CLR_Y}? Do you want to automatically upgrade extension versions? (y/n): {CLR_0}").strip().lower()
-    auto_upgrade = (upgrade_choice == 'y')
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--upgrade", action="store_true", help="Auto-upgrade versions")
+    parser.add_argument("--no-upgrade", action="store_true", help="Don't upgrade versions")
+    args, unknown = parser.parse_known_args()
+
+    if args.upgrade:
+        auto_upgrade = True
+    elif args.no_upgrade:
+        auto_upgrade = False
+    else:
+        upgrade_choice = input(f"\n{CLR_Y}? Do you want to automatically upgrade extension versions? (y/n): {CLR_0}").strip().lower()
+        auto_upgrade = (upgrade_choice == 'y')
     
     if auto_upgrade:
         print(f"{CLR_G}[*] Auto-upgrade enabled. Incremented versions will be applied.{CLR_0}\n")
@@ -155,7 +184,8 @@ def bundle_extensions():
     with open(index_path, 'w', encoding='utf-8') as f:
         json.dump(index, f, indent=2, ensure_ascii=False)
     
-    print(f"\n{CLR_G}{CLR_B}[OK] Success: index.json updated with new versioning and hashes.{CLR_0}")
+    msg = "new versioning and hashes" if auto_upgrade else "new hashes"
+    print(f"\n{CLR_G}{CLR_B}[OK] Success: index.json updated with {msg}.{CLR_0}")
 
 if __name__ == "__main__":
     bundle_extensions()
