@@ -239,54 +239,96 @@
     }
 
     async function fetchPopular(page) {
-        const path = page === 1 ? '/' : `/?page=${page}`;
-        const html = await getWithFallback(path);
-        const data = extractData(html);
+        // Task 1: Fetch from home page
+        const fetchHomeTask = (async () => {
+            const path = page === 1 ? '/' : `/?page=${page}`;
+            const html = await getWithFallback(path);
+            const data = extractData(html);
 
-        let novels = [];
-        let hasNextPage = false;
+            let novels = [];
+            let hasNextPage = false;
 
-        if (data) {
-            const novelsData = data.novels || data.works || data.latestWorks || data.mostReadWorks;
-            if (novelsData && Array.isArray(novelsData.data || novelsData)) {
-                const list = novelsData.data || novelsData;
-                novels = list.map(item => ({
-                    url: toAbsolute(`/novel/${item.id}/${item.slug || ''}`),
-                    title: item.title || item.name,
-                    coverUrl: item.cover || item.image_url ? toAbsolute(item.cover || item.image_url) : ''
-                }));
-                hasNextPage = novelsData.next_page_url !== undefined ? novelsData.next_page_url !== null : false;
-            }
-        }
-
-        if (novels.length === 0) {
-            const doc = parseHtml(html);
-            novels = doc.querySelectorAll("a[href^='/novel/']").map(element => {
-                const href = element.attr('href') || '';
-                if (href.includes('/chapter/')) return null;
-                const titleTag = element.querySelector('h3') || element.querySelector('h2') || element.querySelector('b');
-                const imgTag = element.querySelector('img');
-                if (titleTag || imgTag) {
-                    return {
-                        url: toAbsolute(href),
-                        title: (titleTag ? titleTag.text : (imgTag ? imgTag.attr('alt') : 'Unknown')).trim(),
-                        coverUrl: _pickImageUrl(imgTag)
-                    };
+            if (data) {
+                const novelsData = data.novels || data.works || data.latestWorks || data.mostReadWorks;
+                if (novelsData && Array.isArray(novelsData.data || novelsData)) {
+                    const list = novelsData.data || novelsData;
+                    novels = list.map(item => ({
+                        url: toAbsolute(`/novel/${item.id}/${item.slug || ''}`),
+                        title: item.title || item.name,
+                        coverUrl: item.cover || item.image_url ? toAbsolute(item.cover || item.image_url) : ''
+                    }));
+                    hasNextPage = novelsData.next_page_url !== undefined ? novelsData.next_page_url !== null : false;
                 }
-                return null;
-            }).filter(n => n && n.title && n.title !== 'الرئيسية');
+            }
 
-            const seen = new Set();
-            novels = novels.filter(n => {
-                const k = n.url;
-                if (seen.has(k)) return false;
-                seen.add(k);
-                return true;
-            });
-            hasNextPage = novels.length > 0 && page < 20;
-        }
+            if (novels.length === 0) {
+                const doc = parseHtml(html);
+                novels = doc.querySelectorAll("a[href^='/novel/']").map(element => {
+                    const href = element.attr('href') || '';
+                    if (href.includes('/chapter/')) return null;
+                    const titleTag = element.querySelector('h3') || element.querySelector('h2') || element.querySelector('b');
+                    const imgTag = element.querySelector('img');
+                    if (titleTag || imgTag) {
+                        return {
+                            url: toAbsolute(href),
+                            title: (titleTag ? titleTag.text : (imgTag ? imgTag.attr('alt') : 'Unknown')).trim(),
+                            coverUrl: _pickImageUrl(imgTag)
+                        };
+                    }
+                    return null;
+                }).filter(n => n && n.title && n.title !== 'الرئيسية');
 
-        return { novels, hasNextPage };
+                const seen = new Set();
+                novels = novels.filter(n => {
+                    const k = n.url;
+                    if (seen.has(k)) return false;
+                    seen.add(k);
+                    return true;
+                });
+                hasNextPage = novels.length > 0 && page < 20;
+            }
+            return { novels, hasNextPage };
+        })();
+
+        // Task 2: Fetch from latest-chapters API
+        const fetchLatestApiTask = (async () => {
+            try {
+                const limit = 50;
+                const apiUrl = `https://mknov.com/api/novels/latest-chapters?page=${page}&limit=${limit}`;
+                const responseStr = await http.get(apiUrl);
+                const response = JSON.parse(responseStr);
+                if (response && response.success && Array.isArray(response.data)) {
+                    const latestNovels = response.data.map(item => ({
+                        url: toAbsolute(`/novel/${item.id}`),
+                        title: item.name,
+                        coverUrl: item.image_url ? toAbsolute(item.image_url) : ''
+                    }));
+                    const pagination = response.pagination || {};
+                    const hasNext = (pagination.page || page) < (pagination.totalPages || 0);
+                    return { novels: latestNovels, hasNextPage: hasNext };
+                }
+            } catch (e) {
+                console.log('[MKNOV] Parallel latest API fetch failed: ' + e);
+            }
+            return { novels: [], hasNextPage: false };
+        })();
+
+        // Run both in parallel
+        const [homeResult, latestResult] = await Promise.all([fetchHomeTask, fetchLatestApiTask]);
+
+        // Merge and deduplicate by URL
+        const combined = [...homeResult.novels, ...latestResult.novels];
+        const seen = new Set();
+        const novels = combined.filter(n => {
+            if (!n.url || seen.has(n.url)) return false;
+            seen.add(n.url);
+            return true;
+        });
+
+        return {
+            novels,
+            hasNextPage: homeResult.hasNextPage || latestResult.hasNextPage
+        };
     }
 
     async function fetchLatestUpdates(page) {
@@ -297,7 +339,7 @@
         const url = `https://mknov.com/api/search/advanced?query=${encodeURIComponent(query)}&page=${page}`;
         const rawResponse = await http.get(url);
         const response = JSON.parse(rawResponse);
-        
+
         let novels = [];
         let hasNextPage = false;
 
@@ -308,7 +350,7 @@
                 title: item.name,
                 coverUrl: item.image_url ? toAbsolute(item.image_url) : ''
             }));
-            
+
             const pagination = response.data.pagination || {};
             hasNextPage = pagination.hasMore || false;
         }

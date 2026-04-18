@@ -2,13 +2,13 @@
   "repoName": "Novon Official Extensions",
   "repoUrl": "https://raw.githubusercontent.com/novonapp/extensions/main/index.json",
   "maintainerUrl": "https://github.com/MultiX0",
-  "generated": "2026-04-16T14:59:08Z",
+  "generated": "2026-04-18T02:12:44Z",
   "apiVersion": "2",
   "extensions": [
     {
       "id": "com.novon.kolnovel",
       "name": "KolNovel",
-      "version": "1.3.9",
+      "version": "1.3.10",
       "apiVersion": "1",
       "minAppVersion": "0.0.1",
       "lang": "ar",
@@ -19,14 +19,14 @@
         "aggregator"
       ],
       "icon": "https://raw.githubusercontent.com/novonapp/extensions/main/com.novon.kolnovel/icon.png",
-      "downloadUrl": "https://raw.githubusercontent.com/novonapp/extensions/main/bundles/com.novon.kolnovel-1.3.9.novext",
-      "sha256": "7f97766b3df7e4c2cc1cdfcfb88dafe4a68ba82d16dd61dc57cea2d7e4ca3aab",
-      "updatedAt": "2026-04-16T14:59:08Z"
+      "downloadUrl": "https://raw.githubusercontent.com/novonapp/extensions/main/bundles/com.novon.kolnovel-1.3.10.novext",
+      "sha256": "27e71f0697e9230419c1185e8000d9c565f1a749301ab0ba67c95d32bc73b842",
+      "updatedAt": "2026-04-18T02:12:44Z"
     },
     {
       "id": "com.novon.mtlarabic",
       "name": "MTLArabic",
-      "version": "1.3.8",
+      "version": "1.3.9",
       "apiVersion": "1",
       "minAppVersion": "0.0.1",
       "lang": "ar",
@@ -38,14 +38,14 @@
         "mtl"
       ],
       "icon": "https://raw.githubusercontent.com/novonapp/extensions/main/com.novon.mtlarabic/icon.png",
-      "downloadUrl": "https://raw.githubusercontent.com/novonapp/extensions/main/bundles/com.novon.mtlarabic-1.3.8.novext",
-      "sha256": "4e5f1180acdb472936b8963a944618cb7afcca315ac5732aa1b3130d4566f636",
-      "updatedAt": "2026-04-16T14:59:08Z"
+      "downloadUrl": "https://raw.githubusercontent.com/novonapp/extensions/main/bundles/com.novon.mtlarabic-1.3.9.novext",
+      "sha256": "308a32de1323cb34a8157b9e757a5e031e619d08ff1f175338bd267f0a28c3a3",
+      "updatedAt": "2026-04-18T02:12:45Z"
     },
     {
       "id": "com.novon.template",
       "name": "Template Palette",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "apiVersion": "1",
       "minAppVersion": "0.0.1",
       "lang": "en",
@@ -55,14 +55,14 @@
         "webnovel"
       ],
       "icon": "https://raw.githubusercontent.com/novonapp/extensions/main/com.novon.template/icon.png",
-      "downloadUrl": "https://raw.githubusercontent.com/novonapp/extensions/main/bundles/com.novon.template-1.0.2.novext",
-      "sha256": "f09310917a8aa43635d9ad3b4dde5650917b6bd4a7f212694a1d9154633d0f43",
-      "updatedAt": "2026-04-16T14:59:08Z"
+      "downloadUrl": "https://raw.githubusercontent.com/novonapp/extensions/main/bundles/com.novon.template-1.0.3.novext",
+      "sha256": "0f9740fe307088f70f01788be375fc0268638ae923cec35208217aaa27dd03f1",
+      "updatedAt": "2026-04-18T02:12:45Z"
     },
     {
       "id": "com.novon.mknov",
       "name": "MKNov (مملكة الروايات)",
-      "version": "1.2.10",
+      "version": "1.2.12",
       "apiVersion": "1",
       "minAppVersion": "0.0.1",
       "lang": "ar",
@@ -72,9 +72,9 @@
         "webnovel"
       ],
       "icon": "https://raw.githubusercontent.com/novonapp/extensions/main/com.novon.mknov/icon.png",
-      "downloadUrl": "https://raw.githubusercontent.com/novonapp/extensions/main/bundles/com.novon.mknov-1.2.10.novext",
-      "sha256": "a749ad1e4d903d273c489147513818672c7801490fd9ac4a95e85e8591025288",
-      "updatedAt": "2026-04-16T14:59:08Z"
+      "downloadUrl": "https://raw.githubusercontent.com/novonapp/extensions/main/bundles/com.novon.mknov-1.2.12.novext",
+      "sha256": "ab0bb0fce542c350994634277341c2a573e6e65162b96eccebbd8b84a9ed3813",
+      "updatedAt": "2026-04-18T02:12:44Z"
     }
   ]
 }
